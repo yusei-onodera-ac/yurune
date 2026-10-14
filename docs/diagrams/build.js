@@ -49,82 +49,156 @@ function svgWrap(width, height, body) {
     + `<rect width="${width}" height="${height}" fill="#FFFFFF"/>${body}</svg>`;
 }
 
-// ---- 1 Google Cloud の構成 ----
-function architecture() {
-  const W = 1200;
-  const H = 760;
-  let s = '';
-  s += text(32, 50, 25, INK, 'ゆるね  Google Cloud の構成', { weight: 700 });
-  s += text(32, 80, 16, SUB, '夜の制御、会話、週の見直しは、Cloud Run の 1 つのアプリで動きます');
+// ---- 1 システム構成図 ----
+function arrowTo(x1, y1, x2, y2, color = SUB) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const hx = x2 - Math.cos(angle) * 9;
+  const hy = y2 - Math.sin(angle) * 9;
+  const px = Math.cos(angle + Math.PI / 2) * 5;
+  const py = Math.sin(angle + Math.PI / 2) * 5;
+  return `<line x1="${x1}" y1="${y1}" x2="${hx}" y2="${hy}" stroke="${color}" stroke-width="1.6"/>`
+    + `<path d="M ${x2} ${y2} L ${hx + px} ${hy + py} L ${hx - px} ${hy - py} z" fill="${color}"/>`;
+}
 
-  const top = 112;
-  const panelH = 600;
-  // 左の枠: 利用者の端末
-  s += rect(32, top, 270, panelH, '#FFFFFF', LINE);
-  s += text(52, top + 34, 17, INK, '利用者の端末', { weight: 700 });
-  s += text(52, top + 58, 14, SUB, 'スマホのブラウザ（PWA）');
-  const phoneItems = [
+// 見出しと、数行の説明を持つ箱。高さは行数から決める
+function boxHeight(rowCount) {
+  return 51 + (rowCount - 1) * 21 + 16;
+}
+
+function card(x, y, w, title, rows, options = {}) {
+  const h = options.height || boxHeight(rows.length);
+  let s = rect(x, y, w, h, options.fill || BG, options.stroke || null, 1.5);
+  if (options.marker) s += rect(x, y, 5, h, ACCENT, null, 0, 2);
+  s += text(x + 18, y + 27, 16, INK, title, { weight: 700 });
+  if (options.note) s += text(x + w - 14, y + 27, 13.5, SUB, options.note, { anchor: 'end' });
+  s += lines(x + 18, y + 51, 14, SUB, rows, 21);
+  return s;
+}
+
+function architecture() {
+  const W = 1500;
+  const H = 1152;
+  let s = '';
+  s += text(32, 50, 27, INK, 'ゆるね  システム構成図', { weight: 700 });
+  s += text(32, 82, 16, SUB, '夜の制御、会話、週の見直しは、Cloud Run の 1 つのアプリで動きます。公開と運用の仕組みも、同じ Google Cloud にあります');
+
+  const top = 116;
+  const panelH = 752;
+  const bottom = top + panelH;
+
+  // 左: 利用者の端末
+  s += rect(32, top, 252, panelH, '#FFFFFF', LINE);
+  s += text(50, top + 34, 18, INK, '利用者の端末', { weight: 700 });
+  s += text(50, top + 58, 14, SUB, 'スマホ・PC のブラウザ（PWA）');
+  const device = [
     ['画面', ['JSP と JavaScript。', 'ぽてねの最新の返事を、', '1 行だけ出す']],
-    ['環境音', ['雨、波、森を、', '端末の中で合成する', '（Web Audio）']],
+    ['環境音', ['雨・波・森を、端末の中で', '合成する（Web Audio）。', '音源のファイルは使わない']],
     ['声を文字にする', ['ブラウザの音声認識。', '音声は、このアプリの', 'サーバーに送らない']],
     ['ぽてねの声', ['サーバーでつくった声を、', '環境音と同じ出力で', '流す']],
   ];
-  phoneItems.forEach((item, index) => {
-    const y = top + 78 + index * 126;
-    s += rect(48, y, 238, 114, BG, null);
-    s += text(64, y + 30, 17, INK, item[0], { weight: 700 });
-    s += lines(64, y + 55, 14.5, SUB, item[1], 21);
+  device.forEach((item, index) => {
+    s += card(48, top + 80 + index * 156, 220, item[0], item[1], { height: 142 });
   });
 
-  // 中の枠: Cloud Run
-  s += rect(386, top, 380, panelH, '#FFFFFF', LINE);
-  s += text(406, top + 34, 17, INK, 'アプリ（Cloud Run・東京）', { weight: 700 });
-  s += text(406, top + 58, 14, SUB, 'Java 21 + Tomcat 10.1。インスタンスは 1〜3');
-  const appItems = [
-    ['固定の枠（コード）', ['入出力の検査、音量と呼び出しの上限、', '夜を終える条件、決めた文'], false],
-    ['夜の制御', ['反応を見て、ツールを選ぶ。', '使えないときは、規則だけで動く'], true],
-    ['会話', ['検査を通した発言を、', 'ぽてねとして返す'], true],
-    ['週の見直し', ['近い夜どうしを比べる検定と規則。', 'AI は使わない'], false],
-    ['判断の記録', ['見たこと、選んだこと、理由。', '会話の本文は含めない'], false],
+  // 中: Cloud Run のアプリ
+  s += rect(352, top, 576, panelH, '#FFFFFF', LINE);
+  s += text(372, top + 34, 18, INK, 'アプリ（Cloud Run・東京）', { weight: 700 });
+  s += text(372, top + 58, 14, SUB, 'Java 21 + Tomcat 10.1。1〜3 台、1 台あたり同時 40 リクエスト');
+  const app = [
+    ['入口と層', ['Filter: 認証、CSRF、セキュリティヘッダー、トレース ID', 'Controller → Service → Repository（層に分けた作り）'], false],
+    ['夜の制御', ['観測 → 判断 → 検証 → 実行 → 記録 のループ。', 'Gemini がツール呼び出しで操作を選び、', '選んだ理由を 1 行つけて記録する'], true],
+    ['会話', ['発言を検査してから Gemini に聞き、返事も検査して、', '1 行の文と、ぽてねの声で返す'], true],
+    ['週の見直し', ['標準の夜と変えた夜を、符号反転検定で比べる。', '試す選択肢はトンプソン抽出。AI は使わない'], false],
+    ['固定の枠（コード）', [
+      '入力: 伏せ字 → 指示の無視 → 病気や薬（決まった文） → Model Armor',
+      '出力: 効き目の断定、睡眠状態の推測、個人情報などを止める',
+      'ToolGuard: 許可リスト、引数の範囲、音量の上限と上げ幅',
+      '呼び出し: 20 秒間隔、1 日 2000 回、ブレーカー、停止スイッチ',
+      '認証と画面: ログイン試行の制限、CSRF、CSP、利用者ごとの分離',
+    ], false],
+    ['判断の記録とログ', ['経路（規則か Gemini か）と理由を残す。会話の本文は含めない。', '出してよい項目だけの構造化ログ。トレース ID で、夜 1 回をつなぐ'], false],
   ];
-  appItems.forEach((item, index) => {
-    const y = top + 78 + index * 103;
-    s += rect(402, y, 348, 92, BG, null);
-    if (item[2]) s += rect(402, y, 5, 92, ACCENT, null, 0, 2);
-    s += text(422, y + 29, 17, INK, item[0], { weight: 700 });
-    s += lines(422, y + 53, 14.5, SUB, item[1], 21);
+  let y = top + 80;
+  app.forEach((item) => {
+    const h = boxHeight(item[1].length);
+    s += card(368, y, 544, item[0], item[1], { marker: item[2] });
+    y += h + 8;
   });
 
-  // 右の枠: つないでいるサービス
-  s += rect(850, top, 318, panelH, '#FFFFFF', LINE);
-  s += text(870, top + 34, 17, INK, 'つないでいるサービス', { weight: 700 });
-  s += text(870, top + 58, 14, SUB, 'Google Cloud');
-  const services = [
-    ['Firestore', '東京', '利用者ごとのデータを保存', false],
-    ['Firebase Authentication', '', 'メールとパスワード', false],
-    ['Secret Manager', '', 'Gemini のキー', false],
-    ['Gemini API', '', '夜の判断と、ぽてねの会話', true],
-    ['Model Armor', '米国', '入力と返事の検査', false],
-    ['Cloud Text-to-Speech', '', 'ぽてねの声', false],
-    ['Cloud Logging / Monitoring', '', 'ログ、メトリクス、アラート、予算', false],
+  // 右: つないでいるサービス
+  s += rect(984, top, 484, panelH, '#FFFFFF', LINE);
+  s += text(1004, top + 34, 18, INK, 'つないでいるサービス', { weight: 700 });
+  s += text(1004, top + 58, 14, SUB, 'Google Cloud。矢印は、呼び出しの向き');
+  const groups = [
+    ['AI と検査', top + 94, [
+      ['Gemini API', '', ['夜の判断（ツール呼び出し）と会話'], true, 'out'],
+      ['Model Armor', '米国', ['入力と返事の検査（伏せ字にした文だけ）'], false, 'out'],
+      ['Cloud Text-to-Speech', '', ['ぽてねの声をつくる（返事の文だけ送る）'], false, 'out'],
+    ]],
+    ['データと認証', top + 338, [
+      ['Firestore', '東京', ['利用者ごとに保存。書き込みはサーバーだけ'], false, 'out'],
+      ['Firebase Authentication', '', ['メールとパスワード、メール確認'], false, 'out'],
+      ['Secret Manager', '', ['Gemini のキー。サービスアカウントだけが読める'], false, 'in'],
+    ]],
+    ['運用', top + 582, [
+      ['Cloud Logging・Monitoring', '', ['構造化ログ（30 日）から、メトリクス 7 つ、', 'ダッシュボード、アラート 3 つ'], false, 'out'],
+      ['アップタイム確認・予算', '', ['/ready を 6 か所から 1 分ごと。予算アラート付き'], false, 'in'],
+    ]],
   ];
-  services.forEach((item, index) => {
-    const y = top + 74 + index * 73;
-    s += rect(866, y, 286, 63, item[3] ? ACCENT_SOFT : BG, item[3] ? ACCENT : null, 1.5);
-    s += text(882, y + 26, 15.5, INK, item[0], { weight: 700 });
-    if (item[1]) s += text(1136, y + 26, 13.5, SUB, item[1], { anchor: 'end' });
-    s += text(882, y + 49, 13.5, SUB, item[2]);
+  groups.forEach((group) => {
+    s += text(1004, group[1], 14.5, ACCENT, group[0], { weight: 700 });
+    let gy = group[1] + 14;
+    group[2].forEach((item) => {
+      const h = item[2].length === 2 ? 76 : 62;
+      s += rect(1000, gy, 452, h, item[3] ? ACCENT_SOFT : BG, item[3] ? ACCENT : null, 1.5);
+      s += text(1018, gy + 26, 15.5, INK, item[0], { weight: 700 });
+      if (item[1]) s += text(1438, gy + 26, 13.5, SUB, item[1], { anchor: 'end' });
+      s += lines(1018, gy + 49, 14, SUB, item[2], 21);
+      const mid = gy + h / 2;
+      s += item[4] === 'out' ? arrowTo(928, mid, 1000, mid) : arrowTo(1000, mid, 928, mid);
+      gy += h + 8;
+    });
   });
 
-  // 枠どうしの矢印
-  s += arrow(302, top + 300, 386, top + 300);
-  s += text(344, top + 286, 13.5, SUB, 'HTTPS', { anchor: 'middle' });
-  s += arrow(766, top + 300, 850, top + 300);
-  s += text(808, top + 286, 13.5, SUB, 'API', { anchor: 'middle' });
+  // 端末とアプリのあいだ
+  s += arrowTo(286, 300, 350, 300);
+  s += text(318, 288, 13, SUB, '観測の数値', { anchor: 'middle' });
+  s += text(318, 322, 13, SUB, '発言の文字', { anchor: 'middle' });
+  s += arrowTo(350, 392, 286, 392);
+  s += text(318, 380, 13, SUB, '音の状態', { anchor: 'middle' });
+  s += text(318, 414, 13, SUB, '返事と声', { anchor: 'middle' });
+
+  // 下: 紹介ページ
+  const lower = bottom + 32;
+  s += arrowTo(158, bottom, 158, lower);
+  s += text(170, bottom + 21, 13, SUB, '紹介ページを開く');
+  s += rect(32, lower, 252, 184, '#FFFFFF', LINE);
+  s += text(50, lower + 34, 18, INK, 'Firebase Hosting', { weight: 700 });
+  s += lines(50, lower + 62, 14, SUB, ['紹介ページと、制作者の', 'ページ（HTML と画像）。', 'CSP などのヘッダー付き'], 21);
+  s += text(50, lower + 150, 13.5, SUB, 'yurune-1756f.web.app');
+
+  // 下: 公開の流れ
+  s += rect(352, lower, 1116, 184, '#FFFFFF', LINE);
+  s += text(372, lower + 34, 18, INK, '公開（デプロイ）の流れ', { weight: 700 });
+  s += text(372, lower + 56, 14, SUB, '手元から gcloud run deploy --source で実行（deploy/deploy.ps1）');
+  const pipeline = [
+    [368, 'ソース', ['アプリ、Dockerfile、', '設定のファイル']],
+    [626, 'Cloud Build', ['Dockerfile から', 'イメージをつくる', '（版を固定、非 root）']],
+    [884, 'Artifact Registry', ['イメージを保存。', '脆弱性スキャン付き']],
+  ];
+  const cardY = lower + 72;
+  pipeline.forEach((item) => {
+    s += card(item[0], cardY, 210, item[1], item[2], { height: 104 });
+  });
+  s += arrowTo(580, cardY + 52, 624, cardY + 52);
+  s += arrowTo(838, cardY + 52, 882, cardY + 52);
+  s += card(1112, cardY, 340, '実行用サービスアカウント', ['Firestore、ログとトレース、', 'Model Armor、Gemini のキーの読み取りだけ。', 'Owner や Editor は付けない'], { height: 104 });
+  s += arrowTo(906, cardY, 906, bottom);
+  s += text(918, lower + 36, 13, SUB, '新しいリビジョンに切り替え');
 
   // 凡例
-  s += rect(32, 722, 5, 24, ACCENT, null, 0, 2);
-  s += text(48, 740, 14, SUB, '青緑の印は、Gemini に聞く所です。ほかは、コードだけで決まります。');
+  s += rect(32, 1108, 5, 24, ACCENT, null, 0, 2);
+  s += text(48, 1126, 14, SUB, '青緑の印は、Gemini に聞く所です。ほかは、コードだけで決まります。');
   return svgWrap(W, H, s);
 }
 
@@ -189,7 +263,7 @@ function cycle() {
 }
 
 const FIGURES = [
-  { name: 'architecture', svg: architecture(), width: 1200, height: 760 },
+  { name: 'architecture', svg: architecture(), width: 1500, height: 1152 },
   { name: 'cycle', svg: cycle(), width: 1200, height: 440 },
 ];
 
