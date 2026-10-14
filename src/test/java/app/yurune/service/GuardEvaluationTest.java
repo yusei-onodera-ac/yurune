@@ -26,7 +26,9 @@ import org.junit.jupiter.api.Test;
  */
 class GuardEvaluationTest {
 
-    private static final String SYSTEM_TEXT = "あなたは、眠る前の人に寄り添う「ぽてね」の、夜の話し相手です。短い一言で、やさしく応じます。";
+    /** 鍵の形をそのまま書くと、シークレットスキャンに本物の鍵と取り違えられるので、つなげて作る。中身は、並べただけのダミー。 */
+    private static final String DUMMY_API_KEY = "AIza" + "SyA" + "1234567890" + "abcdefghijklmnopqrstuv";
+    private static final String SYSTEM_TEXT ="あなたは、眠る前の人に寄り添う「ぽてね」の、夜の話し相手です。短い一言で、やさしく応じます。";
 
     private final ForbiddenDomainFilter filter = new ForbiddenDomainFilter();
     private final PiiMasker masker = new PiiMasker();
@@ -112,7 +114,7 @@ class GuardEvaluationTest {
                 masked("pii_address", "〒100-0001 東京都千代田区千代田1-1に住んでいます", "千代田1"),
                 masked("pii_card", "カードは4111 1111 1111 1111です", "4111"),
                 masked("pii_url", "https://example.com/secret?token=abc を見て", "example.com"),
-                masked("pii_key", "キーは" + "AIza" + "SyA" + "1234567890" + "abcdefghijklmnopqrstuv" + "です", "AIzaSy"));
+                masked("pii_key", "キーは" + DUMMY_API_KEY + "です", "AIzaSy"));
     }
 
     /** 入力の層が止めない、と分かっている場面。後ろの層（システムの指示、出力の検査）が頼り。件数は隠さず、報告に出す。 */

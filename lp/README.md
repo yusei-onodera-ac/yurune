@@ -40,7 +40,7 @@ powershell -ExecutionPolicy Bypass -File publish.ps1 -ProjectId <プロジェク
 
 ## 画面の画像を撮り直す
 
-画像は `shots` にあります。アプリの見た目を変えたときは、アプリを動かして、撮り直します。アプリは、メモリ上で、審査用アカウントつきで動かします（[../README.md](../README.md)）。審査用アカウントは、`demo@example.com` と `demo-pass-123` を想定しています。
+画像は `shots` にあります。アプリの見た目を変えたときは、アプリを動かして、撮り直します。アプリは、メモリ上で、審査用アカウントつきで動かします（起動のしかたは [../tools/e2e/README.md](../tools/e2e/README.md) の「メモリ」の欄）。審査用アカウントは、`demo@example.com` と `demo-pass-123` を想定しています。
 
 ```
 set APP_BASE_URL=http://localhost:18080
